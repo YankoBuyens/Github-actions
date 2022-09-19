@@ -31,13 +31,10 @@ on:
     branches: [ "main" ]
 
 env:
-  AWS_REGION: MY_AWS_REGION                   # set this to your preferred AWS region, e.g. us-west-1
-  ECR_REPOSITORY: MY_ECR_REPOSITORY           # set this to your Amazon ECR repository name
-  ECS_SERVICE: MY_ECS_SERVICE                 # set this to your Amazon ECS service name
-  ECS_CLUSTER: MY_ECS_CLUSTER                 # set this to your Amazon ECS cluster name
-  ECS_TASK_DEFINITION: MY_ECS_TASK_DEFINITION # set this to the path to your Amazon ECS task definition
-                                               # file, e.g. .aws/task-definition.json
-  CONTAINER_NAME: MY_CONTAINER_NAME           # set this to the name of the container in the
+  AWS_REGION: eu-west-1                   # set this to your preferred AWS region, e.g. us-west-1
+  ECR_REPOSITORY: 'githubaction-yanko:yanko'           # set this to your Amazon ECR repository name
+
+  CONTAINER_NAME: SpringBootApp           # set this to the name of the container in the
                                                # containerDefinitions section of your task definition
 
 permissions:
@@ -64,7 +61,21 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Build, tag, and push image to Amazon ECR
+    - name: Setup Java JDK
+      uses: actions/setup-java@v3.3.0
+      with:
+        java-version: 17
+        distribution: liberica
+
+    - name: Gradle Build Action
+      env:
+        BUILD_IMAGE: ${{ format(':bootBuildImage --imageName {0}/{1}', steps.login-ecr.outputs.registry, env.ECR_REPOSITORY ) }}# You may pin to the exact commit or the version.
+      # uses: gradle/gradle-build-action@9b814496b50909128c6a52622b416c5ffa04db49
+      uses: gradle/gradle-build-action@v2.1.7
+      with:
+        arguments: ${{ env.BUILD_IMAGE }}
+
+    - name: Push image to Amazon ECR
       id: build-image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
